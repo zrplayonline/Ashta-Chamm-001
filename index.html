@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ashta Chamma - Traditional 7x7 Board Game</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Poppins:wght@300;400;600;700&display=swap');
+    
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: radial-gradient(circle, #2d1b10 0%, #110905 100%);
+    }
+    
+    .title-font {
+      font-family: 'Cinzel', serif;
+    }
+
+    /* Wooden Board Texture Effect */
+    .board-wood {
+      background-color: #8b5a2b;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 0),
+                        radial-gradient(rgba(0, 0, 0, 0.3) 1px, transparent 0);
+      background-size: 8px 8px;
+      box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6), 0 10px 25px rgba(0,0,0,0.5);
+    }
+
+    /* Traditional Board Cells */
+    .board-cell {
+      position: relative;
+      background: #f7e1b5;
+      transition: all 0.2s ease;
+    }
+    
+    .board-cell::after {
+      content: '';
+      position: absolute;
+      inset: 2px;
+      border: 1px solid rgba(139, 90, 43, 0.2);
+      pointer-events: none;
+    }
+
+    .cell-safe {
+      background: #f1c280; /* Brighter gold-like wood */
+    }
+
+    /* Extremely responsive size scaling to fit 6 shells side-by-side in half-width columns */
+    .cowrie-shell {
+      perspective: 600px;
+      width: 26px;
+      height: 18px;
+    }
+
+    @media (min-width: 380px) {
+      .cowrie-shell {
+        width: 32px;
+        height: 22px;
+      }
+    }
+
+    @media (min-width: 640px) {
+      .cowrie-shell {
+        width: 36px;
+        height: 24px;
+      }
+    }
+
+    .shell-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      text-align: center;
+      transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      transform-style: preserve-3d;
+    }
+
+    .shell-flat {
+      transform: rotateY(180deg);
+    }
+
+    .shell-front, .shell-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 50% 50% 40% 40%;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+
+    /* Convex (Round back) - Closed (Down) */
+    .shell-front {
+      background: linear-gradient(135deg, #fdfbf7 0%, #dcd1be 100%);
+      border: 2px solid #bba585;
+    }
+
+    /* Concave (Opening/Slit) - Open (Up) */
+    .shell-back {
+      background: linear-gradient(135deg, #f5ecd7 0%, #c4af90 100%);
+      border: 2px solid #8e734d;
+      transform: rotateY(180deg);
+    }
+
+    .shell-slit {
+      width: 5px;
+      height: 80%;
+      background-color: #4a2f0f;
+      margin: 10% auto;
+      border-radius: 4px;
+      position: relative;
+    }
+    .shell-slit::after {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 2px;
+      background-color: #4a2f0f;
+      top: 50%;
+      left: -2px;
+    }
+
+    .cell-highlight-path {
+      background-color: rgba(234, 179, 8, 0.4) !important;
+      box-shadow: inset 0 0 10px #eab308;
+    }
+    .cell-highlight-target {
+      background-color: rgba(34, 197, 94, 0.5) !important;
+      box-shadow: inset 0 0 12px #22c55e;
+      animation: pulse-target 1.5s infinite alternate;
+    }
+
+    @keyframes pulse-target {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.03); }
+    }
+
+    /* Custom Scrollbar for Game Logs */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.1);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(139, 90, 43, 0.4);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(139, 90, 43, 0.7);
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-100 flex flex-col items-center justify-between p-2 sm:p-4 selection:bg-amber-800 selection:text-white">
+
+  <!-- Main Container -->
+  <div class="w-full max-w-6xl flex flex-col gap-3 sm:gap-4">
+    
+    <!-- Top Header -->
+    <header class="flex flex-col sm:flex-row justify-between items-center bg-stone-900/80 border border-amber-900/30 rounded-2xl p-3 sm:p-4 shadow-xl">
+      <div class="flex items-center gap-3">
+        <div class="bg-amber-600/20 p-2 rounded-xl border border-amber-500/30">
+          <i class="fa-solid fa-dice-d6 text-2xl sm:text-3xl text-amber-500 animate-spin-slow"></i>
+        </div>
+        <div>
+          <h1 class="text-xl sm:text-3xl font-bold title-font tracking-wide bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 bg-clip-text text-transparent">Ashta Chamma</h1>
+          <p class="text-[9px] sm:text-xs text-stone-400 tracking-wider font-semibold">TRADITIONAL 7x7 CHOWKA BHARA BOARD GAME</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 mt-2 sm:mt-0">
+        <button onclick="toggleMute()" class="px-2.5 py-1.5 bg-stone-800 hover:bg-stone-700 text-stone-300 rounded-xl transition flex items-center gap-2 text-xs sm:text-sm border border-stone-700/50">
+          <span id="mute-icon"><i class="fa-solid fa-volume-high"></i></span>
+          <span id="mute-text">Sound On</span>
+        </button>
+        <button onclick="openRulesModal()" class="px-2.5 py-1.5 bg-amber-700 hover:bg-amber-600 text-white rounded-xl transition flex items-center gap-2 text-xs sm:text-sm">
+          <i class="fa-solid fa-circle-info"></i>
+          <span>Rules</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Grid / Control panel split -->
+    <main class="w-full flex justify-center items-center gap-3 sm:gap-4">
+      
+      <!-- Main Game Board Section -->
+      <section class="w-full max-w-3xl flex flex-col items-center justify-center bg-stone-950/40 p-2 sm:p-6 rounded-3xl border border-stone-800/40 relative">
+        
+        <!-- Turn Indicator Banner -->
+        <div class="w-full mb-3 sm:mb-4 flex justify-between items-center px-3 py-2 rounded-xl bg-stone-900/90 border border-stone-800">
+          <div class="flex items-center gap-2 sm:gap-3">
+            <span class="relative flex h-2.5 w-2.5">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" id="turn-ping"></span>
+              <span class="relative inline-flex rounded-full h-2.5 w-2.5" id="turn-dot"></span>
+            </span>
+            <span id="turn-message" class="font-semibold text-xs sm:text-base">Setting up game...</span>
+          </div>
+          <div id="additional-rolls-display" class="hidden text-[10px] sm:text-xs bg-amber-500/10 text-amber-400 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full border border-amber-500/20">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- The 7x7 Board wrapper to enforce dynamic aspect ratio and screen sizing for mobile vs desktop -->
+        <div class="w-full max-w-[92vw] xs:max-w-[420px] sm:max-w-[500px] md:max-w-[580px] aspect-square board-wood p-2 sm:p-4 rounded-2xl border-4 border-[#523315] shadow-2xl relative">
+          <!-- Main 7x7 Grid with tight gap styling optimized for smaller viewports -->
+          <div id="board-grid" class="grid grid-cols-7 grid-rows-7 h-full w-full gap-0.5 sm:gap-1 bg-[#42260f] rounded-lg overflow-hidden">
+            <!-- Generated dynamically with cells -->
+          </div>
+        </div>
+
+        <!-- Two Column Container: Column 1 is Cowrie Shell Dice, Column 2 is Player Setup Configuration -->
+        <div class="w-full max-w-[92vw] xs:max-w-[420px] sm:max-w-[500px] md:max-w-[580px] mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          
+          <!-- Column 1: Cowrie Shell Dice (Compact layout matching image_5b7ee4.png) -->
+          <div class="bg-stone-900/90 border border-stone-800 rounded-2xl p-3 shadow-lg flex flex-col justify-between gap-2.5 relative overflow-hidden">
+            
+            <div class="w-full flex justify-between items-center border-b border-stone-800 pb-1">
+              <h2 class="font-bold title-font text-amber-400 text-[10px] sm:text-xs tracking-wide">COWRIE SHELL DICE</h2>
+              <span id="consecutive-counter" class="text-[8px] bg-red-500/10 text-red-400 px-1.5 py-0.2 rounded border border-red-500/20 hidden">
+                0/3 Rolls
+              </span>
+            </div>
+
+            <!-- Shells visualizer (Fits Snuggly) -->
+            <div class="flex gap-1.5 sm:gap-2 justify-center items-center h-10 w-full">
+              <!-- Shells 1-6 -->
+              <div class="cowrie-shell"><div id="shell-0" class="shell-inner"><div class="shell-front"></div><div class="shell-back"><div class="shell-slit"></div></div></div></div>
+              <div class="cowrie-shell"><div id="shell-1" class="shell-inner"><div class="shell-front"></div><div class="shell-back"><div class="shell-slit"></div></div></div></div>
+              <div class="cowrie-shell"><div id="shell-2" class="shell-inner"><div class="shell-front"></div><div class="shell-back"><div class="shell-slit"></div></div></div></div>
+              <div class="cowrie-shell"><div id="shell-3" class="shell-inner"><div class="shell-front"></div><div class="shell-back"><div class="shell-slit"></div></div></div></div>
+              <div class="cowrie-shell"><div id="shell-4" class="shell-inner"><div class="shell-front"></div><div class="shell-back"><div class="shell-slit"></div></div></div></div>
+              <div class="cowrie-shell"><div id="shell-5" class="shell-inner"><div class="shell-front"></div><div class="shell-back"><div class="shell-slit"></div></div></div></div>
+            </div>
+
+            <!-- Roll Outcome and Trigger Button -->
+            <div class="w-full flex items-center justify-between gap-2 mt-1">
+              <div class="bg-stone-950/80 rounded-xl px-2 py-1 border border-stone-800 flex flex-col justify-center min-w-[65px] sm:min-w-[80px] h-10 sm:h-11">
+                <span class="text-[7px] text-stone-500 font-bold uppercase tracking-wider">ROLL VALUE</span>
+                <span id="roll-value-display" class="text-sm sm:text-base font-black text-amber-400 title-font tracking-wide leading-none">-</span>
+              </div>
+              
+              <button id="btn-roll" onclick="rollDice()" class="flex-1 h-10 sm:h-11 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-extrabold text-[11px] sm:text-xs rounded-xl shadow-lg transition transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-1">
+                <i class="fa-solid fa-cube text-[10px]"></i>
+                <span>ROLL SHELLS</span>
+              </button>
+            </div>
+
+            <!-- Dynamic Roll/Turn Alerts -->
+            <div id="roll-alert" class="hidden w-full text-center text-[9px] sm:text-[10px] py-1 px-2 rounded bg-amber-500/10 text-amber-400 font-medium border border-amber-500/20 animate-pulse">
+              Chamma! Extra turn rewarded.
+            </div>
+          </div>
+
+          <!-- Column 2: Player Configuration (Compact dashboard styling) -->
+          <div class="bg-stone-900/90 border border-stone-800 rounded-2xl p-3 shadow-lg flex flex-col justify-between gap-2">
+            
+            <div class="w-full flex justify-between items-center border-b border-stone-800 pb-1">
+              <h2 class="font-bold title-font text-amber-400 text-[10px] sm:text-xs tracking-wide">GAME SETUP</h2>
+            </div>
+            
+            <div id="config-panel" class="space-y-1 w-full">
+              <!-- Player Rows -->
+              <div class="space-y-1">
+                <!-- Player 1 (Red) -->
+                <div class="flex items-center justify-between bg-stone-950/50 px-2 py-1 rounded-lg border border-red-900/20">
+                  <div class="flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-red-500 shadow-lg shadow-red-500/50"></span>
+                    <span class="text-[10px] sm:text-[11px] font-semibold">South (Red)</span>
+                  </div>
+                  <select id="p1-type" class="bg-stone-900 text-[10px] text-stone-200 border border-stone-700 rounded px-1.5 py-0.5 focus:outline-none focus:border-amber-500">
+                    <option value="human">Human</option>
+                    <option value="ai">Smart Bot</option>
+                  </select>
+                </div>
+                
+                <!-- Player 2 (Green) -->
+                <div class="flex items-center justify-between bg-stone-950/50 px-2 py-1 rounded-lg border border-emerald-900/20">
+                  <div class="flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50"></span>
+                    <span class="text-[10px] sm:text-[11px] font-semibold">East (Green)</span>
+                  </div>
+                  <select id="p2-type" class="bg-stone-900 text-[10px] text-stone-200 border border-stone-700 rounded px-1.5 py-0.5 focus:outline-none focus:border-amber-500">
+                    <option value="ai">Smart Bot</option>
+                    <option value="human">Human</option>
+                    <option value="none">Disabled</option>
+                  </select>
+                </div>
+
+                <!-- Player 3 (Yellow) -->
+                <div class="flex items-center justify-between bg-stone-950/50 px-2 py-1 rounded-lg border border-yellow-900/20">
+                  <div class="flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-yellow-500 shadow-lg shadow-yellow-500/50"></span>
+                    <span class="text-[10px] sm:text-[11px] font-semibold">North (Yellow)</span>
+                  </div>
+                  <select id="p3-type" class="bg-stone-900 text-[10px] text-stone-200 border border-stone-700 rounded px-1.5 py-0.5 focus:outline-none focus:border-amber-500">
+                    <option value="ai" selected>Smart Bot</option>
+                    <option value="human">Human</option>
+                    <option value="none">Disabled</option>
+                  </select>
+                </div>
+
+                <!-- Player 4 (Blue) -->
+                <div class="flex items-center justify-between bg-stone-950/50 px-2 py-1 rounded-lg border border-blue-900/20">
+                  <div class="flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-blue-500 shadow-lg shadow-blue-500/50"></span>
+                    <span class="text-[10px] sm:text-[11px] font-semibold">West (Blue)</span>
+                  </div>
+                  <select id="p4-type" class="bg-stone-900 text-[10px] text-stone-200 border border-stone-700 rounded px-1.5 py-0.5 focus:outline-none focus:border-amber-500">
+                    <option value="ai" selected>Smart Bot</option>
+                    <option value="human">Human</option>
+                    <option value="none">Disabled</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Restart Button -->
+              <button onclick="startNewGame()" class="w-full mt-1.5 py-1 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-bold rounded-lg text-[10px] sm:text-xs shadow-md transition flex items-center justify-center gap-1">
+                <i class="fa-solid fa-rotate text-[9px]"></i>
+                <span>Restart Game</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+
+    <!-- Footer attribution -->
+    <footer class="text-center py-2 sm:py-4 text-[10px] sm:text-xs text-stone-500 flex flex-col sm:flex-row justify-between gap-1.5 border-t border-stone-800/60 mt-2 sm:mt-4">
+      <span>© 2026 Ashta Chamma Board Game. Authentically Designed.</span>
+      <span class="flex items-center gap-1 justify-center"><i class="fa-solid fa-heart text-red-800 animate-pulse"></i> Reviving Ancient Board Strategy</span>
+    </footer>
+  </div>
+
+  <!-- Traditional Rules Modal -->
+  <div id="rules-modal" class="fixed inset-0 z-50 bg-stone-950/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-stone-900 border border-amber-900/40 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl relative">
+      <button onclick="closeRulesModal()" class="absolute top-4 right-4 text-stone-400 hover:text-white text-xl">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      
+      <div class="flex items-center gap-2 mb-3 sm:mb-4 border-b border-stone-800 pb-1.5">
+        <i class="fa-solid fa-book-open text-amber-500 text-xl"></i>
+        <h3 class="text-lg sm:text-xl font-bold title-font text-amber-400">Ashta Chamma Rules (7x7)</h3>
+      </div>
+      
+      <div class="text-xs sm:text-sm text-stone-300 space-y-3 max-h-[350px] sm:max-h-[400px] overflow-y-auto pr-2">
+        <p class="font-semibold text-amber-500 text-[10px] sm:text-xs uppercase tracking-wider">Goal of the Game</p>
+        <p>Race all 4 of your pawns from your starting safe house, around the board's spiral pathways, and reach the central <strong>"Safe House" (Goal)</strong> in the exact middle of the board.</p>
+        
+        <p class="font-semibold text-amber-500 text-[10px] sm:text-xs uppercase tracking-wider">How to Roll (6 Cowrie Shells)</p>
+        <p>Instead of dice, 6 cowrie shells are cast. The count of shells landing slit-side (mouth) face up determines your moves:</p>
+        <ul class="list-disc pl-5 space-y-1">
+          <li><strong>1 or 6 shells up:</strong> Move the corresponding number of spaces + <em>Extra turn!</em></li>
+          <li><strong>2, 3, 4, 5 shells up:</strong> Move that many spaces.</li>
+          <li><strong>0 shells up:</strong> Move 8 spaces.</li>
+        </ul>
+        <p class="text-stone-400 italic text-[11px]">Note: Rolling three consecutive special rolls (1 or 6) results in a "Bust," cancelling all moves of your turn.</p>
+
+        <p class="font-semibold text-amber-500 text-[10px] sm:text-xs uppercase tracking-wider">Entering the Rings (Concentric Spirals)</p>
+        <p>The board is divided into 3 concentric zones: the outer loop (24 squares), middle loop (16 squares), and inner loop (8 squares).</p>
+        <ul class="list-disc pl-5 space-y-1">
+          <li><strong>Outer Loop:</strong> Pawns travel <em>anti-clockwise</em>.</li>
+          <li><strong>Middle Loop:</strong> Pawns enter the middle ring and travel <em>clockwise</em>.</li>
+          <li><strong>Inner Loop:</strong> Pawns travel <em>anti-clockwise</em> before stepping into the central Goal.</li>
+        </ul>
+
+        <p class="font-semibold text-red-400 text-[10px] sm:text-xs uppercase tracking-wider">The Capture/Kill Rule (CRITICAL)</p>
+        <p class="text-amber-200">You MUST capture (kill) at least one opponent pawn with any of your pawns before your pawns are allowed to enter the middle loop! If you reach the loop threshold without any kills, you must continue to loop the outer perimeter.</p>
+
+        <p class="font-semibold text-amber-500 text-[10px] sm:text-xs uppercase tracking-wider">Safe Zones (Crossed Cells)</p>
+        <p>Squares marked with an <strong>X</strong> are Safe Houses. Pawns here are safe from being captured. Multiple players can occupy safe houses together. Landing on an opponent's pawn on any other cell sends them back to their start!</p>
+      </div>
+
+      <button onclick="closeRulesModal()" class="w-full mt-5 sm:mt-6 py-2.5 bg-amber-700 hover:bg-amber-600 font-bold rounded-xl text-xs sm:text-sm text-white transition">
+        Understood, Let's Play!
+      </button>
+    </div>
+  </div>
+
+  <!-- Audio Synthesis Helper -->
+  <script>
+    // Pure Web Audio API Synth to avoid external audio file requests
+    let isMuted = false;
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function toggleMute() {
+      isMuted = !isMuted;
+      document.getElementById('mute-icon').innerHTML = isMuted ? '<i class="fa-solid fa-volume-xmark text-red-500"></i>' : '<i class="fa-solid fa-volume-high"></i>';
+      document.getElementById('mute-text').innerText = isMuted ? 'Muted' : 'Sound On';
+    }
+
+    function playSound(type) {
+      if (isMuted) return;
+      initAudio();
+      if (!audioCtx) return;
+
+      const osc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      osc.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      const now = audioCtx.currentTime;
+
+      if (type === 'roll') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + 0.15);
+        gainNode.gain.setValueAtTime(0.15, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+        osc.start(now);
+        osc.stop(now + 0.15);
+      } else if (type === 'move') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(400, now + 0.1);
+        gainNode.gain.setValueAtTime(0.3, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        osc.start(now);
+        osc.stop(now + 0.1);
+      } else if (type === 'kill') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);
+        gainNode.gain.setValueAtTime(0.2, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      } else if (type === 'win-pawn') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, now); 
+        osc.frequency.setValueAtTime(659.25, now + 0.1); 
+        osc.frequency.setValueAtTime(783.99, now + 0.2); 
+        gainNode.gain.setValueAtTime(0.25, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+        osc.start(now);
+        osc.stop(now + 0.4);
+      } else if (type === 'win-game') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, now); 
+        osc.frequency.setValueAtTime(554.37, now + 0.15); 
+        osc.frequency.setValueAtTime(659.25, now + 0.3); 
+        osc.frequency.setValueAtTime(880, now + 0.45); 
+        gainNode.gain.setValueAtTime(0.25, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+        osc.start(now);
+        osc.stop(now + 0.8);
+      } else if (type === 'bust') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(120, now);
+        osc.frequency.linearRampToValueAtTime(80, now + 0.25);
+        gainNode.gain.setValueAtTime(0.25, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      }
+    }
+  </script>
+
+  <!-- Core Game Scripts -->
+  <script>
+    // Player Configuration Setup
+    const PLAYERS = {
+      p1: { id: 'p1', name: 'South (Red)', color: 'red', colorHex: '#ef4444', textHex: 'text-red-400', borderHex: 'border-red-900/30', bgHex: 'bg-red-500', startCell: [6,3], turns: 0 },
+      p2: { id: 'p2', name: 'East (Green)', color: 'green', colorHex: '#10b981', textHex: 'text-emerald-400', borderHex: 'border-emerald-900/30', bgHex: 'bg-emerald-500', startCell: [3,6], turns: 1 },
+      p3: { id: 'p3', name: 'North (Yellow)', color: 'yellow', colorHex: '#eab308', textHex: 'text-yellow-400', borderHex: 'border-yellow-900/30', bgHex: 'bg-yellow-500', startCell: [0,3], turns: 2 },
+      p4: { id: 'p4', name: 'West (Blue)', color: 'blue', colorHex: '#3b82f6', textHex: 'text-blue-400', borderHex: 'border-blue-900/30', bgHex: 'bg-blue-500', startCell: [3,0], turns: 3 }
+    };
+
+    // Safe Squares relative to the coordinates drawn
+    const SAFE_SQUARES = [
+      '0,3', '1,1', '1,5',
+      '3,0', '3,3', '3,6',
+      '5,1', '5,5', '6,3'
+    ];
+
+    // Build South (Red) path manually step-by-step covering all 49 squares spirals:
+    const BASE_SOUTH_PATH = [
+      // Outer perimeter (24 squares) - traveling anti-clockwise
+      [6,3], [6,4], [6,5], [6,6], [5,6], [4,6], [3,6], [2,6], [1,6], [0,6], [0,5], [0,4], [0,3], [0,2], [0,1], [0,0], [1,0], [2,0], [3,0], [4,0], [5,0], [6,0], [6,1], [6,2],
+      // Middle loop (16 squares) - traveling clockwise
+      [5,2], [5,1], [4,1], [3,1], [2,1], [1,1], [1,2], [1,3], [1,4], [1,5], [2,5], [3,5], [4,5], [5,5], [5,4], [5,3],
+      // Inner loop (8 squares) - traveling anti-clockwise
+      [4,3], [4,4], [3,4], [2,4], [2,3], [2,2], [3,2], [4,2],
+      // Center Goal / Home
+      [3,3]
+    ];
+
+    // Helper to rotate coordinates 90 degrees clockwise around (3,3)
+    function rotate90(r, c) {
+      return [c, 6 - r];
+    }
+
+    // Generate paths for each player dynamically by rotating the base path
+    const PLAYER_PATHS = {
+      p1: BASE_SOUTH_PATH, // South (no rotation)
+      p4: BASE_SOUTH_PATH.map(([r, c]) => rotate90(r, c)), // West (90 deg CW)
+      p3: BASE_SOUTH_PATH.map(([r, c]) => rotate90(...rotate90(r, c))), // North (180 deg CW)
+      p2: BASE_SOUTH_PATH.map(([r, c]) => rotate90(...rotate90(...rotate90(r, c)))) // East (270 deg CW)
+    };
+
+    // Game State Variables
+    let activePlayers = ['p1', 'p2', 'p3', 'p4'];
+    let playerTypes = { p1: 'human', p2: 'ai', p3: 'ai', p4: 'ai' };
+    let currentPlayerIndex = 0;
+    
+    // Status tracking
+    let playerHasCaptured = { p1: false, p2: false, p3: false, p4: false };
+    
+    // Pawn positions - each player has 4 pawns, index denotes path position
+    let pawnPositions = {
+      p1: [0, 0, 0, 0],
+      p2: [0, 0, 0, 0],
+      p3: [0, 0, 0, 0],
+      p4: [0, 0, 0, 0]
+    };
+
+    let activeRolls = []; // Store current turn's rolls (supports multiple rolls on 1 or 6)
+    let currentRollIndex = 0; 
+    let consecutiveSpecialRolls = 0; // Maximum 3 before Bust
+    let turnState = 'need-roll'; // 'need-roll', 'need-move', 'game-over'
+    
+    let isRollingAnimation = false;
+    let selectedPawnIndex = null;
+
+    // Initialize Game on load
+    window.onload = function() {
+      startNewGame();
+    };
+
+    // Prepare and setup game state
+    function startNewGame() {
+      activePlayers = [];
+      const types = ['p1', 'p2', 'p3', 'p4'];
+      
+      types.forEach(pId => {
+        const typeSelect = document.getElementById(`${pId}-type`);
+        const pType = typeSelect.value;
+        playerTypes[pId] = pType;
+        if (pType !== 'none') {
+          activePlayers.push(pId);
+        }
+      });
+
+      if (activePlayers.length < 2) {
+        alert("Please enable at least 2 players to start Ashta Chamma.");
+        return;
+      }
+
+      // Reset Positions
+      activePlayers.forEach(pId => {
+        pawnPositions[pId] = [0, 0, 0, 0];
+        playerHasCaptured[pId] = false;
+      });
+
+      currentPlayerIndex = 0;
+      activeRolls = [];
+      currentRollIndex = 0;
+      consecutiveSpecialRolls = 0;
+      turnState = 'need-roll';
+      selectedPawnIndex = null;
+
+      renderBoard();
+      updateStatusPanel();
+      setupNextTurn();
+    }
+
+    // Visual Board Generation
+    function renderBoard() {
+      const grid = document.getElementById('board-grid');
+      grid.innerHTML = '';
+
+      // Create standard 7x7 matrix cells
+      for (let r = 0; r < 7; r++) {
+        for (let c = 0; c < 7; c++) {
+          const coordKey = `${r},${c}`;
+          const isSafe = SAFE_SQUARES.includes(coordKey);
+          
+          const cell = document.createElement('div');
+          cell.id = `cell-${r}-${c}`;
+          cell.className = `board-cell flex flex-wrap items-center justify-center p-0.5 rounded-sm select-none ${isSafe ? 'cell-safe' : ''}`;
+          
+          // Render visual indicator for safe squares
+          if (isSafe) {
+            cell.innerHTML = `
+              <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
+                <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
+                  <line x1="0" y1="0" x2="100" y2="100" stroke="#78350f" stroke-width="4"></line>
+                  <line x1="100" y1="0" x2="0" y2="100" stroke="#78350f" stroke-width="4"></line>
+                </svg>
+              </div>
+            `;
+            if (coordKey === '3,3') {
+              cell.innerHTML += `
+                <span class="absolute text-[8px] sm:text-[9px] text-amber-900 font-bold opacity-60 tracking-wider">HOME</span>
+              `;
+            }
+          }
+
+          grid.appendChild(cell);
+        }
+      }
+
+      // Render the Pawns onto their respective coordinates
+      renderPawns();
+    }
+
+    // Render Pawns dynamically into board grid cells with highly responsive size adaptation
+    function renderPawns() {
+      // Clear all pawns container from cells
+      document.querySelectorAll('.pawn-container').forEach(el => el.remove());
+
+      // Dictionary to collect which cell has what pawns so we can stack/cluster them beautifully
+      const cellOccupancy = {};
+
+      activePlayers.forEach(pId => {
+        const path = PLAYER_PATHS[pId];
+        const playerInfo = PLAYERS[pId];
+
+        pawnPositions[pId].forEach((pos, pawnIdx) => {
+          // If pawn finished, skip rendering on cells (it went into center/safe house)
+          if (pos >= 48) {
+            return; 
+          }
+
+          const [r, c] = path[pos];
+          const coordKey = `${r}-${c}`;
+
+          if (!cellOccupancy[coordKey]) {
+            cellOccupancy[coordKey] = [];
+          }
+
+          cellOccupancy[coordKey].push({
+            pId,
+            pawnIdx,
+            color: playerInfo.colorHex,
+            bgClass: playerInfo.bgHex,
+            name: playerInfo.name
+          });
+        });
+      });
+
+      // Render stacked/nested pawns in cells
+      Object.keys(cellOccupancy).forEach(coordKey => {
+        const [r, c] = coordKey.split('-');
+        const cell = document.getElementById(`cell-${r}-${c}`);
+        if (!cell) return;
+
+        const occupants = cellOccupancy[coordKey];
+        const container = document.createElement('div');
+        container.className = 'pawn-container w-full h-full flex flex-wrap items-center justify-center gap-0.5 z-10';
+
+        // Size adapts dynamically based on quantity inside cell and device scale to prevent overflow
+        const sizeClass = occupants.length > 2 
+          ? 'w-3 h-3 sm:w-3.5 sm:h-3.5 text-[6px] sm:text-[7px]' 
+          : occupants.length > 1 
+            ? 'w-3.5 h-3.5 sm:w-5 sm:h-5 text-[7px] sm:text-[8px]' 
+            : 'w-5 h-5 sm:w-7 sm:h-7 md:w-8 md:h-8 text-[7px] sm:text-[9px]';
+
+        occupants.forEach(occ => {
+          const pEl = document.createElement('div');
+          pEl.className = `${occ.bgClass} ${sizeClass} text-white font-extrabold rounded-full flex items-center justify-center shadow-md border-[1px] sm:border-2 border-white/80 cursor-pointer transform hover:scale-110 active:scale-95 transition-all relative`;
+          pEl.innerHTML = `<span>${occ.pawnIdx + 1}</span>`;
+          
+          // Tooltip/Highlight actions
+          const activePId = activePlayers[currentPlayerIndex];
+          const isCurrentPlayerTurn = (occ.pId === activePId && turnState === 'need-move');
+          const isHuman = playerTypes[activePId] === 'human';
+
+          if (isCurrentPlayerTurn && isHuman) {
+            // Highlighting to show interactive click options
+            pEl.classList.add('animate-bounce');
+            pEl.classList.add('ring-2');
+            pEl.classList.add('ring-yellow-400');
+            pEl.onclick = (e) => {
+              e.stopPropagation();
+              selectPawnToMove(occ.pawnIdx);
+            };
+          }
+
+          // Visual hint when hovering on your pawns
+          pEl.onmouseenter = () => {
+            if (isCurrentPlayerTurn) {
+              highlightPotentialPath(occ.pId, occ.pawnIdx);
+            }
+          };
+          pEl.onmouseleave = () => {
+            clearHighlights();
+          };
+
+          container.appendChild(pEl);
+        });
+
+        cell.appendChild(container);
+      });
+    }
+
+    // Handles highlighting expected movement trajectory
+    function highlightPotentialPath(pId, pawnIdx) {
+      clearHighlights();
+      if (activeRolls.length === 0 || currentRollIndex >= activeRolls.length) return;
+
+      const rollVal = activeRolls[currentRollIndex];
+      const curPos = pawnPositions[pId][pawnIdx];
+      const path = PLAYER_PATHS[pId];
+
+      const potentialNewPos = calculateNextPosition(pId, curPos, rollVal);
+
+      // Draw highlighting along intermediate spaces
+      for (let i = curPos + 1; i <= Math.min(potentialNewPos, 48); i++) {
+        if (i >= path.length) break;
+        const [r, c] = path[i];
+        const cell = document.getElementById(`cell-${r}-${c}`);
+        if (cell) {
+          cell.classList.add(i === potentialNewPos ? 'cell-highlight-target' : 'cell-highlight-path');
+        }
+      }
+    }
+
+    function clearHighlights() {
+      document.querySelectorAll('.board-cell').forEach(cell => {
+        cell.classList.remove('cell-highlight-path', 'cell-highlight-target');
+      });
+    }
+
+    // Manage turns and configure visual labels
+    function setupNextTurn() {
+      const activePId = activePlayers[currentPlayerIndex];
+      const playerInfo = PLAYERS[activePId];
+
+      // Update Turn banner dots and colors
+      const dot = document.getElementById('turn-dot');
+      const ping = document.getElementById('turn-ping');
+      const turnMessage = document.getElementById('turn-message');
+
+      dot.style.backgroundColor = playerInfo.colorHex;
+      ping.style.backgroundColor = playerInfo.colorHex;
+      
+      turnMessage.innerHTML = `Turn: <strong class="${playerInfo.textHex}">${playerInfo.name}</strong>`;
+
+      // Reset state variables
+      activeRolls = [];
+      currentRollIndex = 0;
+      consecutiveSpecialRolls = 0;
+      turnState = 'need-roll';
+      selectedPawnIndex = null;
+
+      document.getElementById('consecutive-counter').classList.add('hidden');
+      document.getElementById('roll-value-display').innerText = '-';
+      document.getElementById('roll-alert').classList.add('hidden');
+      document.getElementById('additional-rolls-display').classList.add('hidden');
+
+      renderBoard();
+      updateStatusPanel();
+
+      // Check if current player is Bot (AI)
+      if (playerTypes[activePId] === 'ai') {
+        document.getElementById('btn-roll').disabled = true;
+        document.getElementById('btn-roll').classList.add('opacity-50');
+        setTimeout(executeAILogic, 1200); // Small delay to simulate thinking
+      } else {
+        document.getElementById('btn-roll').disabled = false;
+        document.getElementById('btn-roll').classList.remove('opacity-50');
+      }
+    }
+
+    // Simulate cowrie shell rolling physically
+    function rollDice() {
+      if (turnState !== 'need-roll' || isRollingAnimation) return;
+
+      const activePId = activePlayers[currentPlayerIndex]; 
+      isRollingAnimation = true;
+      playSound('roll');
+
+      // Shells elements animate spin
+      for (let i = 0; i < 6; i++) {
+        const shell = document.getElementById(`shell-${i}`);
+        shell.style.transform = `rotateX(${Math.random() * 1440 + 360}deg) rotateY(${Math.random() * 1440 + 360}deg)`;
+      }
+
+      setTimeout(() => {
+        // Calculate result: each of the 6 shells has ~50% chance of being face-up
+        let faceUpCount = 0;
+        
+        for (let i = 0; i < 6; i++) {
+          const isFaceUp = Math.random() > 0.45;
+          const shellInner = document.getElementById(`shell-${i}`);
+          
+          // Clear rotation from animation
+          shellInner.style.transform = ''; 
+          
+          if (isFaceUp) {
+            // Face-up: show the slit side
+            shellInner.classList.remove('shell-flat');
+            faceUpCount++;
+          } else {
+            // Face-down: show the convex side
+            shellInner.classList.add('shell-flat');
+          }
+        }
+
+        let rollVal = faceUpCount;
+        if (faceUpCount === 0) rollVal = 8;
+
+        const isSpecialVal = (rollVal === 1 || rollVal === 6);
+        activeRolls.push(rollVal);
+
+        // Render current roll value
+        document.getElementById('roll-value-display').innerText = rollVal;
+
+        // Display Alerts for Extra turn
+        const alertBox = document.getElementById('roll-alert');
+        if (isSpecialVal) {
+          consecutiveSpecialRolls++;
+          alertBox.innerText = `Extra turn granted for rolling ${rollVal}!`;
+          alertBox.classList.remove('hidden');
+
+          // Check if Bust! (3 consecutive 1s or 6s)
+          if (consecutiveSpecialRolls === 3) {
+            playSound('bust');
+            alertBox.innerText = `Bust! 3 special rolls in a row. Turn forfeited!`;
+            activeRolls = [];
+            setTimeout(() => {
+              nextPlayer();
+            }, 2000);
+            isRollingAnimation = false;
+            return;
+          }
+
+          // Show consecutive helper banner
+          const consecHelper = document.getElementById('consecutive-counter');
+          consecHelper.innerText = `${consecutiveSpecialRolls}/3 Special Rolls`;
+          consecHelper.classList.remove('hidden');
+
+          // Keep in rolling state to roll additional dice
+          turnState = 'need-roll';
+          isRollingAnimation = false;
+
+          // If Bot, automatically trigger next roll
+          if (playerTypes[activePId] === 'ai') {
+            setTimeout(executeAILogic, 1000);
+          }
+          return;
+        } else {
+          // Reset consecutive special rolls count if we rolled a normal value
+          alertBox.classList.add('hidden');
+          document.getElementById('consecutive-counter').classList.add('hidden');
+        }
+
+        // We have our full set of rolls. Proceed to move pawns.
+        turnState = 'need-move';
+        currentRollIndex = 0;
+        isRollingAnimation = false;
+
+        // Render additional roll values queued if any
+        updateAdditionalRollsQueue();
+
+        // Check if player has ANY valid moves with the current roll
+        if (!hasAnyValidMoves(activePId, activeRolls[currentRollIndex])) {
+          // Advance to next available roll in queue or finish turn
+          advanceMoveQueue();
+        } else {
+          // If Bot, let AI make its move
+          if (playerTypes[activePId] === 'ai') {
+            setTimeout(executeAILogic, 1200);
+          } else {
+            renderBoard(); // refresh board to make pawns interactive & bouncy
+          }
+        }
+
+      }, 1000);
+    }
+
+    // Renders mini pill tags for players rolling multiple dice
+    function updateAdditionalRollsQueue() {
+      const banner = document.getElementById('additional-rolls-display');
+      if (activeRolls.length > 1) {
+        const remaining = activeRolls.slice(currentRollIndex);
+        banner.innerHTML = `Roll Queue: ${remaining.map((r, idx) => `
+          <span class="px-2 py-0.5 rounded-full ${idx === 0 ? 'bg-amber-500 text-stone-950 font-bold' : 'bg-stone-800 text-stone-300'} text-[10px] inline-block ml-1">
+            ${r}
+          </span>
+        `).join('')}`;
+        banner.classList.remove('hidden');
+      } else {
+        banner.classList.add('hidden');
+      }
+    }
+
+    // Calculates path movement logically enforcing ring boundary constraints
+    function calculateNextPosition(pId, curPos, rollVal) {
+      let targetPos = curPos + rollVal;
+      
+      // Enforce EXACT roll to finish (index 48)
+      if (targetPos > 48) {
+        return curPos; // Overflow cannot move
+      }
+
+      // Traditional Constraint Check: Cannot enter Middle Loop (index 24) without at least 1 capture!
+      const enteringInnerZone = (curPos < 24 && targetPos >= 24);
+      if (enteringInnerZone && !playerHasCaptured[pId]) {
+        // If they have not captured, they must stay looping the outer ring!
+        let wrappedPos = targetPos % 24;
+        return wrappedPos;
+      }
+
+      return targetPos;
+    }
+
+    // Checks if any player pawn can move given a roll
+    function hasAnyValidMoves(pId, rollVal) {
+      let possible = false;
+      pawnPositions[pId].forEach((pos) => {
+        if (pos >= 48) return; // finished pawn
+
+        const nextPos = calculateNextPosition(pId, pos, rollVal);
+        if (nextPos !== pos) {
+          possible = true;
+        }
+      });
+      return possible;
+    }
+
+    // Selects and applies movement to chosen pawn
+    function selectPawnToMove(pawnIdx) {
+      if (turnState !== 'need-move') return;
+
+      const activePId = activePlayers[currentPlayerIndex];
+      const rollVal = activeRolls[currentRollIndex];
+      const curPos = pawnPositions[activePId][pawnIdx];
+
+      if (curPos >= 48) return; // finished
+
+      const nextPos = calculateNextPosition(activePId, curPos, rollVal);
+      
+      if (nextPos === curPos) {
+        return;
+      }
+
+      // Execute Movement
+      movePawnVisual(activePId, pawnIdx, curPos, nextPos);
+    }
+
+    // Handles the step-by-step movement animations and path updates
+    function movePawnVisual(pId, pawnIdx, start, end) {
+      // Temporarily disable clicks during move
+      turnState = 'animating';
+      clearHighlights();
+
+      let currentStep = start;
+      const interval = setInterval(() => {
+        currentStep++;
+        pawnPositions[pId][pawnIdx] = currentStep;
+        playSound('move');
+        renderBoard();
+
+        if (currentStep === end) {
+          clearInterval(interval);
+          handleMoveCompletion(pId, pawnIdx, end);
+        }
+      }, 200);
+    }
+
+    // Evaluate capture rules and goals upon pawn landing
+    function handleMoveCompletion(pId, pawnIdx, finalPos) {
+      const path = PLAYER_PATHS[pId];
+      const [r, c] = path[finalPos];
+      const coordKey = `${r},${c}`;
+      const isSafe = SAFE_SQUARES.includes(coordKey);
+
+      let captureOccurred = false;
+
+      // If the cell is NOT a safe house, search for opponent pawns on the same coordinates to capture/kill!
+      if (!isSafe && finalPos < 48) {
+        activePlayers.forEach(oppPId => {
+          if (oppPId === pId) return; // ignore self
+
+          const oppPath = PLAYER_PATHS[oppPId];
+          pawnPositions[oppPId].forEach((oppPos, oppPawnIdx) => {
+            const [oppR, oppC] = oppPath[oppPos];
+            // Match coordinate values
+            if (oppR === r && oppC === c) {
+              // Captured! Send opponent back to start (index 0)
+              pawnPositions[oppPId][oppPawnIdx] = 0;
+              captureOccurred = true;
+              
+              if (!playerHasCaptured[pId]) {
+                playerHasCaptured[pId] = true;
+              }
+            }
+          });
+        });
+      }
+
+      if (captureOccurred) {
+        playSound('kill');
+        // Traditional reward for a kill is an extra roll!
+        activeRolls.push(6); 
+      }
+
+      // Did pawn reach center safe house / Goal?
+      if (finalPos === 48) {
+        playSound('win-pawn');
+        
+        // Check if player won the entire game (all 4 pawns reached index 48)
+        const won = pawnPositions[pId].every(pos => pos === 48);
+        if (won) {
+          turnState = 'game-over';
+          playSound('win-game');
+          alert(`Congratulations! ${PLAYERS[pId].name} has safely guided all pawns to the center safe house and won!`);
+          updateStatusPanel();
+          return;
+        }
+      }
+
+      // Advance to next roll or player turn
+      advanceMoveQueue();
+    }
+
+    // Handles processing multi-roll queues sequentially
+    function advanceMoveQueue() {
+      currentRollIndex++;
+      const activePId = activePlayers[currentPlayerIndex];
+
+      if (currentRollIndex < activeRolls.length) {
+        // More rolls in turn queue, update state
+        updateAdditionalRollsQueue();
+        
+        if (!hasAnyValidMoves(activePId, activeRolls[currentRollIndex])) {
+          advanceMoveQueue();
+        } else {
+          turnState = 'need-move';
+          if (playerTypes[activePId] === 'ai') {
+            setTimeout(executeAILogic, 1000);
+          } else {
+            renderBoard();
+          }
+        }
+      } else {
+        // Roll queue finished! Time for next player's turn
+        nextPlayer();
+      }
+    }
+
+    // Advance turn to next configured player
+    function nextPlayer() {
+      currentPlayerIndex = (currentPlayerIndex + 1) % activePlayers.length;
+      setupNextTurn();
+    }
+
+    // Smart Automated AI Decision Maker
+    function executeAILogic() {
+      const activePId = activePlayers[currentPlayerIndex];
+      
+      if (turnState === 'need-roll') {
+        rollDice();
+      } else if (turnState === 'need-move') {
+        const rollVal = activeRolls[currentRollIndex];
+        const moves = [];
+
+        // Score all potential moves and pick the optimal one
+        pawnPositions[activePId].forEach((pos, pawnIdx) => {
+          if (pos >= 48) return; 
+
+          const nextPos = calculateNextPosition(activePId, pos, rollVal);
+          if (nextPos === pos) return; 
+
+          let score = 10; 
+
+          // Check if this move results in a capture (highest priority!)
+          const path = PLAYER_PATHS[activePId];
+          const [r, c] = path[nextPos];
+          const isSafe = SAFE_SQUARES.includes(`${r},${c}`);
+          let canCapture = false;
+
+          if (!isSafe) {
+            activePlayers.forEach(oppPId => {
+              if (oppPId === activePId) return;
+              const oppPath = PLAYER_PATHS[oppPId];
+              pawnPositions[oppPId].forEach((oppPos) => {
+                const [oppR, oppC] = oppPath[oppPos];
+                if (oppR === r && oppC === c) {
+                  canCapture = true;
+                }
+              });
+            });
+          }
+
+          if (canCapture) {
+            score += 100; 
+          }
+
+          if (nextPos === 48) {
+            score += 80;
+          }
+
+          if (pos < 24 && nextPos >= 24) {
+            score += 40;
+          }
+
+          if (isSafe) {
+            score += 15;
+          }
+
+          score += Math.random() * 5;
+
+          moves.push({ pawnIdx, score });
+        });
+
+        if (moves.length > 0) {
+          moves.sort((a, b) => b.score - a.score);
+          const bestMove = moves[0];
+          selectPawnToMove(bestMove.pawnIdx);
+        } else {
+          advanceMoveQueue();
+        }
+      }
+    }
+
+    // Refresh Sidebar Game status panels
+    function updateStatusPanel() {
+      // Panel removed, function left empty to prevent runtime errors on state change
+    }
+  </script>
+  <!-- Fullscreen Launcher -->
+<div id="fullscreen-start" style="
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:#000;
+display:flex;
+justify-content:center;
+align-items:center;
+z-index:999999;
+">
+    <button onclick="startFullscreen()" style="
+    padding:20px 40px;
+    font-size:24px;
+    font-weight:bold;
+    cursor:pointer;
+    border:none;
+    border-radius:10px;
+    background:#4ade80;
+    color:#000;
+    ">
+        PLAY FULLSCREEN
+    </button>
+</div>
+
+<script>
+function startFullscreen() {
+    const elem = document.documentElement;
+
+    if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen();
+    } else if (elem.msRequestFullscreen) {
+        elem.msRequestFullscreen();
+    }
+
+    document.getElementById("fullscreen-start").style.display = "none";
+}
+
+document.addEventListener("fullscreenchange", () => {
+    const overlay = document.getElementById("fullscreen-start");
+
+    if (!document.fullscreenElement) {
+        overlay.style.display = "flex";
+    } else {
+        overlay.style.display = "none";
+    }
+});
+</script>
+</body>
+</html>
